@@ -14,10 +14,11 @@ def vocab_decode(array, vocab):
 def read_data(filename, vocab, window, overlap):
 	print("filename:", filename)
 	lines = [line.strip() for line in open(filename, "r").readlines()]
-	while True:
+	#while True:
+	for i in range(500):
 		random.shuffle(lines)
 		for text in lines:
-			#text = vocab_encode(text, vocab)
+			text = vocab_encode(text, vocab)
 			for start in range(0, len(text) - window, overlap):
 				chunk = text[start: start + window]
 				chunk += [0] * (window - len(chunk))
@@ -28,15 +29,19 @@ def read_batch(stream, batch_size):
 	for element in stream:
 		batch.append(element)
 		if len(batch) == batch_size:
+			print("Yielding batch:")
+			print(batch)
 			yield batch
 			batch = []
+	print("Yielding batch:")
+	print(batch)
 	yield batch
 
 class CharRNN(object):
 	def __init__(self, model):
 		self.model = model
 		self.path = "names.txt"
-		self.vocab = " $%'()+,-./0123456789:;=?ABCDEFGHIJKLMNOPQRSTUVWXYZ\\^_abcdefghijklmnopqrstuvwxyz{|}"
+		self.vocab = " &$%'()+,-./0123456789:;=?ABCDEFGHIJKLMNOPQRSTUVWXYZ\\^_abcdefghijklmnopqrstuvwxyz{|}"
 		self.seq = tf.placeholder(tf.int32, [None, None])
 		self.temp = tf.constant(1.5)
 		self.hidden_sizes = [128, 256]
@@ -79,27 +84,28 @@ class CharRNN(object):
 			if ckpt and ckpt.model_checkpoint_path:
 				saver.restore(sess, ckpt.model_checkpoint_path)
 			iteration = self.gstep.eval()
-			stream = read_data(self.path, self.vocab, self.num_steps, overlap=self.num_steps//2)
-			data = read_batch(stream, self.batch_size)
+			#stream = read_data(self.path, self.vocab, self.num_steps, overlap=self.num_steps//2)
+			#data = read_batch(stream, self.batch_size)
 			while True:
-				batch = next(data)
-				# for batch in read_batch(read_data(DATA_PATH, vocab)):
-				batch_loss, _ = sess.run([self.loss, self.opt], {self.seq: batch})
-				if (iteration + 1) % self.skip_step == 0:
-					print("Iter {}. \n		Loss {}. Time {}".format(iteration, batch_loss, time.time() - start))
-					self.online_infer(sess)
-					start = time.time()
-					checkpoint_name = "checkpoints/" + self.model + "/char-rnn"
-					if min_loss is None:
-						saver.save(sess, checkpoint_name, iteration)
-					elif batch_loss < min_loss:
-						saver.save(sess, checkpoint_name, iteration)
-						min_loss = batch_loss
-				iteration += 1
+				#batch = next(data)
+				for batch in read_batch(read_data(self.path, self.vocab, self.num_steps, overlap=self.num_steps//2), self.batch_size):
+					batch_loss, _ = sess.run([self.loss, self.opt], {self.seq: batch})
+					if (iteration + 1) % self.skip_step == 0:
+						print("Iter {}. \n		Loss {}. Time {}".format(iteration, batch_loss, time.time() - start))
+						self.online_infer(sess)
+						start = time.time()
+						checkpoint_name = "checkpoints/" + self.model + "/char-rnn"
+						if min_loss is None:
+							saver.save(sess, checkpoint_name, iteration)
+						elif batch_loss < min_loss:
+							saver.save(sess, checkpoint_name, iteration)
+							min_loss = batch_loss
+					iteration += 1
 
 	def online_infer(self, sess):
 		# Generate sequence one char at a time, based on the previous char
-		for seed in ["Hillary", "I", "R", "T", "@", "N", "M", ".", "G", "A", "W"]:
+		#for seed in ["Hillary", "I", "R", "T", "@", "N", "M", ".", "G", "A", "W"]:
+		for seed in ["Chateau", "I", "R", "T", "E", "N", "M", "G", "A", "W"]:
 			sentence = seed
 			state = None
 			for _ in range(self.len_generated):
@@ -115,13 +121,21 @@ class CharRNN(object):
 def main():
 	model = "winne"
 	# NOTE: if utils.safe_mkdir is not available; one alternative is to use os.mkdir
-	# utils.safe_mkdir("checkpoints")
-	# utils.safe_mkdir("checkpoints/" + model)
-	os.mkdir("checkpoints")
-	os.mkdir("checkpoints/" + model)
+	#shutil.rmtree("checkpoints", ignore_errors=True)
+	#shutil.rmtree("checkpoints/" + model, ignore_errors=True)
+	#utils.safe_mkdir("checkpoints")
+	#utils.safe_mkdir("checkpoints/" + model)
+	if not os.path.exists("checkpoints"):
+		os.mkdir("checkpoints")
+	if not os.path.exists("checkpoints/" + model):
+		os.mkdir("checkpoints/" + model)
+	tf.reset_default_graph()
 	lm = CharRNN(model)
+	print("Initialized RNN.\nCreating model.")
 	lm.create_model()
+	print("Created model.\nTraining.")
 	lm.train()
+	print("Training complete.")
 	
 if __name__ == "__main__":
 	main()

@@ -4,6 +4,7 @@ import random
 import numpy as np
 import tensorflow as tf
 
+tf.reset_default_graph()
 seed_value = 42
 tf.set_random_seed(seed_value)
 random.seed(seed_value)
@@ -13,7 +14,7 @@ def one_hot(v):
 
 # Data I/O
 # data = open(__file__, "r").read()  # Use this source file as input for RNN
-data = open("data", "r").read()  # Use this source file as input for RNN
+data = open("names.txt", "r").read()  # Use this source file as input for RNN
 chars = sorted(list(set(data)))
 data_size, vocab_size = len(data), len(chars)
 print("Data has %d characters, %d unique." % (data_size, vocab_size))
