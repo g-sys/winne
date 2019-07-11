@@ -3,7 +3,6 @@
 # Adapted from one-character RNN by Vinh Khuc (@knvinh),
 # itself addapted from Karpathy's min-char-rnn.py
 # https://gist.github.com/karpathy/d4dee566867f8291f086
-# George Tretyakov
 
 import random
 import numpy as np
